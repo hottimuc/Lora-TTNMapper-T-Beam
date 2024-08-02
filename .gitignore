@@ -53,3 +53,9 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# PlatformIO
+.pio
+
+# MacOS
+.DS_Store

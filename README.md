@@ -34,6 +34,55 @@ You can program the T-Beam using the [Arduino ESP32](https://github.com/espressi
 It is suitable for t-beam HW-Version up to V07 (use folder "uptoV07") and higher versions with Soft-Power-Button (use folder "fromV08").
 For version V08 and higher you also need [this library](https://github.com/lewisxhe/AXP202X_Library) from Lewis He.
 
+## PlatformIO
+You can also flash your T-Beam using platformIO. The repository includes a configuration for Version V08 and higher. Edit the configuration in ``fromV08/config.h`` and run ``pio run --target upload``
+
+## TTN V3
+* Create a new application
+* Register a new end device
+  * Select "Enter end device specifics manually"
+    * Frequency Plan: Europe 863-870 MHz (SF9 for RX2 - recommended)
+    * LoRaWAN Version: LoRaWAN Specification 1.0.1
+  * Select "Show advanced activation, LoRaWAN class and cluster settings"
+    * Activation Mode: Activation by personalization (ABP)
+    * Network defaults: Deselect "Use network's default MAC settings"
+    * Select "Enabled" for "Resets frame counters"
+  * Press "Generate" for DevEUI, Device address, AppSKey, NwkSKey
+  * Choose en End Device ID
+  * Click "Register End Device"
+* Setup an upload payload formatter, with Formatter Type "Custom Javascript Formatter"
+```javascript
+function decodeUplink(input) {
+    var bytes = input.bytes;
+
+    var decoded = {};
+
+    decoded.latitude = ((bytes[0]<<16)>>>0) + ((bytes[1]<<8)>>>0) + bytes[2];
+    decoded.latitude = (decoded.latitude / 16777215.0 * 180) - 90;
+
+    decoded.longitude = ((bytes[3]<<16)>>>0) + ((bytes[4]<<8)>>>0) + bytes[5];
+    decoded.longitude = (decoded.longitude / 16777215.0 * 360) - 180;
+
+    var altValue = ((bytes[6]<<8)>>>0) + bytes[7];
+    var sign = bytes[6] & (1 << 7);
+    if(sign){
+        decoded.altitude = 0xFFFF0000 | altValue;
+    } else {
+        decoded.altitude = altValue;
+    }
+
+    decoded.hdop = bytes[8] / 10.0;
+  
+    return {
+        data: decoded,
+        warnings: [],
+        errors: []
+    };
+}
+```
+* Add TTN Mapper Integration via Integrations -> Webhooks -> Add Webhook -> TTN Mapper
+
+## TTN V2 (legacy)
 On The Things Network side, the settings needed are available [here](https://www.thethingsnetwork.org/docs/applications/ttnmapper/).
 
 Configure the Payload decoder with:
